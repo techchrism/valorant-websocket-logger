@@ -25,6 +25,15 @@ async function getSession(port, password) {
     })).json();
 }
 
+async function getHelp(port, password) {
+    return (await fetch(`https://127.0.0.1:${port}/help`, {
+        headers: {
+            'Authorization': 'Basic ' + Buffer.from(`riot:${password}`).toString('base64')
+        },
+        agent: localAgent
+    })).json();
+}
+
 (async () => {
     let lockData;
     try {
@@ -37,6 +46,7 @@ async function getSession(port, password) {
     console.log('Got lock data...');
     
     const sessionData = await getSession(lockData.port, lockData.password);
+    const helpData = await getHelp(lockData.port, lockData.password);
     console.log('Got PUUID...');
     
     try {
@@ -48,14 +58,18 @@ async function getSession(port, password) {
     
     const logStream = fs.createWriteStream(logPath);
     logStream.write(JSON.stringify(lockData) + '\n');
-    logStream.write(JSON.stringify(sessionData) + '\n\n');
+    logStream.write(JSON.stringify(sessionData) + '\n');
+    logStream.write(JSON.stringify(helpData) + '\n\n');
     
     const ws = new WebSocket(`wss://riot:${lockData.password}@localhost:${lockData.port}`, {
         rejectUnauthorized: false
     });
     
     ws.on('open', () => {
-        ws.send('[5, "OnJsonApiEvent"]');
+        Object.entries(helpData.events).forEach(([name, desc]) => {
+            if(name === 'OnJsonApiEvent') return;
+            ws.send(JSON.stringify([5, name]));
+        });
         console.log('Connected to websocket!');
     });
     
