@@ -74,7 +74,7 @@ async function getHelp(port, password) {
     });
     
     ws.on('message', data => {
-        logStream.write(data + '\n');
+        logStream.write((new Date()).getTime() + ' ' + data + '\n');
     });
     
     ws.on('close', () => {
