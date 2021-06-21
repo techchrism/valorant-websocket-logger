@@ -34,18 +34,57 @@ async function getHelp(port, password) {
     })).json();
 }
 
+async function waitForLockfile()
+{
+    return new Promise(async (resolve, reject) =>
+    {
+        const watcher = fs.watch(path.join(process.env['LOCALAPPDATA'], 'Riot Games\\Riot Client\\Config\\'), (eventType, fileName) =>
+        {
+            if(eventType === 'rename' && fileName === 'lockfile')
+            {
+                watcher.close();
+                resolve();
+            }
+        });
+    });
+}
+
 (async () => {
-    let lockData;
-    try {
-        lockData = await getLockfileData();
-    }
-    catch(e) {
-        console.log('Could not find lockfile! Is Valorant running?');
-        return;
-    }
+    let lockData = null;
+    do
+    {
+        try
+        {
+            lockData = await getLockfileData();
+        }
+        catch(e)
+        {
+            console.log('Waiting for lockfile...');
+            await waitForLockfile();
+        }
+    } while(lockData === null);
+    
     console.log('Got lock data...');
     
-    const sessionData = await getSession(lockData.port, lockData.password);
+    let sessionData = null;
+    let lastRetryMessage = 0;
+    do
+    {
+        try
+        {
+            sessionData = await getSession(lockData.port, lockData.password);
+        }
+        catch(e)
+        {
+            const currentTime = (new Date()).getTime();
+            if(currentTime - lastRetryMessage > 1000)
+            {
+                console.log('Unable to get session data, retrying...');
+                lastRetryMessage = currentTime;
+            }
+        }
+    } while(sessionData === null);
+    
     const helpData = await getHelp(lockData.port, lockData.password);
     console.log('Got PUUID...');
     
