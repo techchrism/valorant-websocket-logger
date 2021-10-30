@@ -8,6 +8,12 @@ const localAgent = new https.Agent({
     rejectUnauthorized: false
 });
 
+async function asyncTimeout(delay) {
+    return new Promise(resolve => {
+        setTimeout(resolve, delay);
+    });
+}
+
 async function getLockfileData() {
     const lockfilePath = path.join(process.env['LOCALAPPDATA'], 'Riot Games\\Riot Client\\Config\\lockfile');
     const contents = await fs.promises.readFile(lockfilePath, 'utf8');
@@ -85,7 +91,17 @@ async function waitForLockfile()
         }
     } while(sessionData === null);
     
-    const helpData = await getHelp(lockData.port, lockData.password);
+    let helpData = null;
+    do
+    {
+        helpData = await getHelp(lockData.port, lockData.password);
+        if(!helpData.events.hasOwnProperty('OnJsonApiEvent_chat_v4_presences')) {
+            console.log('Retrying help data events...');
+            helpData = null;
+            await asyncTimeout(1500);
+        }
+    } while(helpData === null);
+    
     console.log('Got PUUID...');
     
     try {
