@@ -79,6 +79,11 @@ async function waitForLockfile()
         try
         {
             sessionData = await getSession(lockData.port, lockData.password);
+            if(sessionData.loaded === false)
+            {
+                await asyncTimeout(1500);
+                sessionData = null;
+            }
         }
         catch(e)
         {
