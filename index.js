@@ -69,9 +69,9 @@ async function waitForLockfile()
             await waitForLockfile();
         }
     } while(lockData === null);
-    
+
     console.log('Got lock data...');
-    
+
     let sessionData = null;
     let lastRetryMessage = 0;
     do
@@ -95,7 +95,7 @@ async function waitForLockfile()
             }
         }
     } while(sessionData === null);
-    
+
     let helpData = null;
     do
     {
@@ -106,25 +106,25 @@ async function waitForLockfile()
             await asyncTimeout(1500);
         }
     } while(helpData === null);
-    
+
     console.log('Got PUUID...');
-    
+
     try {
         await fs.promises.mkdir('./logs');
     }
     catch (ignored) {}
     const logPath = `./logs/${(new Date()).getTime()}.txt`;
     console.log(`Writing to ${logPath}`);
-    
+
     const logStream = fs.createWriteStream(logPath);
     logStream.write(JSON.stringify(lockData) + '\n');
     logStream.write(JSON.stringify(sessionData) + '\n');
     logStream.write(JSON.stringify(helpData) + '\n\n');
-    
-    const ws = new WebSocket(`wss://riot:${lockData.password}@localhost:${lockData.port}`, {
+
+    const ws = new WebSocket(`wss://riot:${lockData.password}@127.0.0.1:${lockData.port}`, {
         rejectUnauthorized: false
     });
-    
+
     ws.on('open', () => {
         Object.entries(helpData.events).forEach(([name, desc]) => {
             if(name === 'OnJsonApiEvent') return;
@@ -132,11 +132,11 @@ async function waitForLockfile()
         });
         console.log('Connected to websocket!');
     });
-    
+
     ws.on('message', data => {
         logStream.write((new Date()).getTime() + ' ' + data + '\n');
     });
-    
+
     ws.on('close', () => {
         console.log('Websocket closed!');
         logStream.end();
